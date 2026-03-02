@@ -41,21 +41,17 @@ app.post('/api/scans', async (c) => {
     },
   }
 
-  const durableObjectId = c.env.SCAN_ACTOR.idFromName(parsed.uuid)
-  const durableObject = c.env.SCAN_ACTOR.get(durableObjectId)
-  const response = await durableObject.fetch('https://scan-actor/record', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(event),
-  })
+  const durableObject = c.env.SCAN_ACTOR.getByName(parsed.uuid)
+  const response = await durableObject.recordScan(event)
 
-  if (!response.ok) {
-    return c.json({ ok: false, error: 'Failed to persist scan event' }, 500)
+  if (!response.ok || !response.eventId) {
+    return c.json(
+      { ok: false, error: response.error ?? 'Failed to persist scan event' },
+      500,
+    )
   }
 
-  return c.json({ ok: true, eventId: event.eventId })
+  return c.json({ ok: true, eventId: response.eventId })
 })
 
 app.get('/api/scans/:uuid', async (c) => {
@@ -65,15 +61,25 @@ app.get('/api/scans/:uuid', async (c) => {
     return c.json({ ok: false, error: 'Invalid UUID' }, 400)
   }
 
-  const durableObjectId = c.env.SCAN_ACTOR.idFromName(uuid)
-  const durableObject = c.env.SCAN_ACTOR.get(durableObjectId)
-  const response = await durableObject.fetch('https://scan-actor/scans')
+  const durableObject = c.env.SCAN_ACTOR.getByName(uuid)
+  const response = await durableObject.getScans()
+  return c.json(response)
+})
 
-  if (!response.ok) {
-    return c.json({ ok: false, error: 'Failed to read scan events' }, 500)
+app.get('/api/scans/:uuid/stream', async (c) => {
+  const uuid = c.req.param('uuid')
+
+  if (!isValidUuid(uuid)) {
+    return c.json({ ok: false, error: 'Invalid UUID' }, 400)
   }
 
-  return c.json(await response.json())
+  if (c.req.header('upgrade') !== 'websocket') {
+    return c.json({ ok: false, error: 'Expected websocket upgrade' }, 426)
+  }
+
+  const durableObject = c.env.SCAN_ACTOR.getByName(uuid)
+  const upstreamRequest = new Request('https://scan-actor/stream', c.req.raw)
+  return durableObject.fetch(upstreamRequest)
 })
 
 app.notFound((c) => c.json({ ok: false, error: 'Not found' }, 404))

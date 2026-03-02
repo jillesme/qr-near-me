@@ -37,3 +37,26 @@
   padding: 0.45rem 0.7rem;
   cursor: pointer;
 }
+
+.actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.list-wrap {
+  overflow-x: auto;
+}
+
+.scan-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+}
+
+.scan-table th,
+.scan-table td {
+  border-bottom: 1px solid #d5dee8;
+  text-align: left;
+  padding: 0.45rem;
+  font-size: 0.9rem;
+}
