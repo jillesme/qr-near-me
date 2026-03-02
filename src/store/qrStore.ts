@@ -16,7 +16,7 @@ import type {
   LocationStatus,
   QrProfile,
   UserLocation,
-} from '../types/scan'
+} from '../../shared/contracts'
 
 function upsertEvent(events: InteractionEvent[], incoming: InteractionEvent) {
   if (events.some((event) => event.eventId === incoming.eventId)) {

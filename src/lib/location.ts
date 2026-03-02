@@ -1,4 +1,4 @@
-import type { LocationStatus, UserLocation } from '../types/scan'
+import type { LocationStatus, UserLocation } from '../../shared/contracts'
 
 export type LocationResult = {
   locationStatus: LocationStatus

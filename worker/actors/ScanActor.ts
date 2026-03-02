@@ -7,7 +7,7 @@ import type {
   LocationStatus,
   QrProfile,
   UserLocation,
-} from '../types'
+} from '../../shared/contracts'
 
 type QrProfileRow = {
   uuid: string
@@ -226,7 +226,7 @@ export class ScanActor extends Actor<Env> {
   }
 
   private ensureSchema(): void {
-    this.sql`
+    void this.sql`
       CREATE TABLE IF NOT EXISTS qr_profiles (
         uuid TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -241,7 +241,7 @@ export class ScanActor extends Actor<Env> {
       );
     `
 
-    this.sql`
+    void this.sql`
       CREATE TABLE IF NOT EXISTS interaction_events (
         event_id TEXT PRIMARY KEY,
         uuid TEXT NOT NULL,
@@ -260,7 +260,7 @@ export class ScanActor extends Actor<Env> {
       );
     `
 
-    this.sql`
+    void this.sql`
       CREATE INDEX IF NOT EXISTS idx_interaction_events_time
       ON interaction_events (attempted_at_ms DESC);
     `
@@ -274,7 +274,7 @@ export class ScanActor extends Actor<Env> {
 
     const createdAt = new Date().toISOString()
 
-    this.sql`
+    void this.sql`
       INSERT INTO qr_profiles (
         uuid,
         name,
@@ -385,7 +385,7 @@ export class ScanActor extends Actor<Env> {
     const attemptedAt = new Date().toISOString()
     const eventId = crypto.randomUUID()
 
-    this.sql`
+    void this.sql`
       INSERT INTO interaction_events (
         event_id,
         uuid,

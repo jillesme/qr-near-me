@@ -5,7 +5,7 @@ import type {
   CreateQrCodeResponse,
   GetInteractionsResponse,
   GetQrProfileResponse,
-} from '../types/scan'
+} from '../../shared/contracts'
 
 async function parseJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T
