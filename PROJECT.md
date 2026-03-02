@@ -59,7 +59,7 @@ This backlog converts the improvement plan into trackable tickets with IDs, scop
   - Type-only changes compile with `pnpm build`.
 
 ### P-004 - Normalize API response/error schema
-- **Status:** `todo`
+- **Status:** `done`
 - **Priority:** High
 - **Effort:** M (1-2 days)
 - **Depends on:** `P-003`
@@ -72,7 +72,7 @@ This backlog converts the improvement plan into trackable tickets with IDs, scop
   - Frontend handles errors without ad-hoc string branching.
 
 ### P-005 - Split Zustand store into slices/modules
-- **Status:** `todo`
+- **Status:** `done`
 - **Priority:** Medium
 - **Effort:** M (2-3 days)
 - **Depends on:** `P-004`
@@ -85,7 +85,7 @@ This backlog converts the improvement plan into trackable tickets with IDs, scop
   - Existing routes functionally unchanged.
 
 ### P-006 - WebSocket resilience and parsing hardening
-- **Status:** `todo`
+- **Status:** `done`
 - **Priority:** Medium
 - **Effort:** M (1-2 days)
 - **Depends on:** `P-005`

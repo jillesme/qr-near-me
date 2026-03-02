@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { ScanActor } from './actors/ScanActor'
+import type { ApiErrorCode } from '../shared/contracts'
 import {
   isValidUuid,
   parseCreateQrCodeRequest,
@@ -10,20 +11,34 @@ const app = new Hono<{ Bindings: Env }>()
 
 const MAX_DISTANCE_METERS = 100
 
+function ok<Data>(data: Data) {
+  return { ok: true as const, data }
+}
+
+function fail<Code extends ApiErrorCode>(code: Code, message: string) {
+  return {
+    ok: false as const,
+    error: {
+      code,
+      message,
+    },
+  }
+}
+
 app.post('/api/qr-codes', async (c) => {
   const payload = await c.req.json().catch(() => null)
   const parsed = parseCreateQrCodeRequest(payload)
 
   if (!parsed) {
-    return c.json({ ok: false, error: 'Invalid payload' }, 400)
+    return c.json(fail('invalid_payload', 'Invalid payload.'), 400)
   }
 
   if (parsed.creatorLocationStatus !== 'granted' && !parsed.allowColoFallback) {
     return c.json(
-      {
-        ok: false,
-        error: 'Creator location is required unless colo fallback is enabled.',
-      },
+      fail(
+        'creator_location_required',
+        'Creator location is required unless colo fallback is enabled.',
+      ),
       400,
     )
   }
@@ -41,35 +56,33 @@ app.post('/api/qr-codes', async (c) => {
   })
 
   if (!createResponse.ok) {
-    return c.json(
-      { ok: false, error: createResponse.error ?? 'Failed to create QR code' },
-      500,
-    )
+    return c.json(fail('internal_error', 'Failed to create QR code.'), 500)
   }
 
-  return c.json({
-    ok: true,
-    uuid,
-    scanUrl: `${baseUrl}/q/${uuid}`,
-    detailUrl: `${baseUrl}/qr/${uuid}`,
-  })
+  return c.json(
+    ok({
+      uuid,
+      scanUrl: `${baseUrl}/q/${uuid}`,
+      detailUrl: `${baseUrl}/qr/${uuid}`,
+    }),
+  )
 })
 
 app.get('/api/qr-codes/:uuid', async (c) => {
   const uuid = c.req.param('uuid')
 
   if (!isValidUuid(uuid)) {
-    return c.json({ ok: false, error: 'Invalid UUID' }, 400)
+    return c.json(fail('invalid_uuid', 'Invalid UUID.'), 400)
   }
 
   const durableObject = c.env.SCAN_ACTOR.getByName(uuid)
   const response = await durableObject.getQrProfile()
 
   if (!response.profile) {
-    return c.json({ ok: false, error: 'QR code not found' }, 404)
+    return c.json(fail('not_found', 'QR code not found.'), 404)
   }
 
-  return c.json({ ok: true, profile: response.profile })
+  return c.json(ok({ profile: response.profile }))
 })
 
 app.post('/api/interactions/accept', async (c) => {
@@ -77,7 +90,7 @@ app.post('/api/interactions/accept', async (c) => {
   const parsed = parseInteractionAttemptRequest(payload)
 
   if (!parsed) {
-    return c.json({ ok: false, error: 'Invalid payload' }, 400)
+    return c.json(fail('invalid_payload', 'Invalid payload.'), 400)
   }
 
   const requestWithCf = c.req.raw as Request & { cf?: { colo?: string } }
@@ -94,40 +107,40 @@ app.post('/api/interactions/accept', async (c) => {
   })
 
   if (!response.ok) {
-    if (response.error === 'QR code not found') {
-      return c.json({ ok: false, error: response.error }, 404)
+    if (response.error.code === 'not_found') {
+      return c.json(fail('not_found', response.error.message), 404)
     }
 
-    return c.json(
-      { ok: false, error: response.error ?? 'Failed to evaluate interaction' },
-      500,
-    )
+    return c.json(fail('internal_error', 'Failed to evaluate interaction.'), 500)
   }
 
-  return c.json(response)
+  return c.json(ok(response.data))
 })
 
 app.get('/api/interactions/:uuid', async (c) => {
   const uuid = c.req.param('uuid')
 
   if (!isValidUuid(uuid)) {
-    return c.json({ ok: false, error: 'Invalid UUID' }, 400)
+    return c.json(fail('invalid_uuid', 'Invalid UUID.'), 400)
   }
 
   const durableObject = c.env.SCAN_ACTOR.getByName(uuid)
   const response = await durableObject.getInteractions()
-  return c.json(response)
+  return c.json(ok({ events: response.events }))
 })
 
 app.get('/api/interactions/:uuid/stream', async (c) => {
   const uuid = c.req.param('uuid')
 
   if (!isValidUuid(uuid)) {
-    return c.json({ ok: false, error: 'Invalid UUID' }, 400)
+    return c.json(fail('invalid_uuid', 'Invalid UUID.'), 400)
   }
 
   if (c.req.header('upgrade') !== 'websocket') {
-    return c.json({ ok: false, error: 'Expected websocket upgrade' }, 426)
+    return c.json(
+      fail('websocket_upgrade_required', 'Expected websocket upgrade.'),
+      426,
+    )
   }
 
   const durableObject = c.env.SCAN_ACTOR.getByName(uuid)
@@ -135,7 +148,7 @@ app.get('/api/interactions/:uuid/stream', async (c) => {
   return durableObject.fetch(upstreamRequest)
 })
 
-app.notFound((c) => c.json({ ok: false, error: 'Not found' }, 404))
+app.notFound((c) => c.json(fail('not_found', 'Not found.'), 404))
 
 export default app
 export { ScanActor }

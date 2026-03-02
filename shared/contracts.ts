@@ -59,19 +59,49 @@ export type InteractionEvent = {
   }
 }
 
-export type CreateQrCodeResponse = {
-  ok: boolean
-  uuid?: string
-  scanUrl?: string
-  detailUrl?: string
-  error?: string
+export type ApiErrorCode =
+  | 'invalid_payload'
+  | 'invalid_uuid'
+  | 'creator_location_required'
+  | 'not_found'
+  | 'websocket_upgrade_required'
+  | 'network_error'
+  | 'invalid_response'
+  | 'internal_error'
+
+export type ApiError<Code extends ApiErrorCode = ApiErrorCode> = {
+  code: Code
+  message: string
 }
 
-export type GetQrProfileResponse = {
-  ok: boolean
-  profile?: QrProfile
-  error?: string
+export type ApiSuccess<Data> = {
+  ok: true
+  data: Data
 }
+
+export type ApiFailure<Code extends ApiErrorCode = ApiErrorCode> = {
+  ok: false
+  error: ApiError<Code>
+}
+
+export type ApiResponse<
+  Data,
+  Code extends ApiErrorCode = ApiErrorCode,
+> = ApiSuccess<Data> | ApiFailure<Code>
+
+export type CreateQrCodeData = {
+  uuid: string
+  scanUrl: string
+  detailUrl: string
+}
+
+export type CreateQrCodeResponse = ApiResponse<CreateQrCodeData>
+
+export type GetQrProfileData = {
+  profile: QrProfile
+}
+
+export type GetQrProfileResponse = ApiResponse<GetQrProfileData>
 
 export type AcceptInteractionRequest = {
   uuid: string
@@ -79,18 +109,18 @@ export type AcceptInteractionRequest = {
   scannerLocationStatus: LocationStatus
 }
 
-export type AcceptInteractionResponse = {
-  ok: boolean
-  accepted?: boolean
-  eventId?: string
-  reason?: string | null
-  distanceMeters?: number | null
-  decisionMethod?: InteractionDecisionMethod
-  error?: string
+export type AcceptInteractionData = {
+  accepted: boolean
+  eventId: string
+  reason: string | null
+  distanceMeters: number | null
+  decisionMethod: InteractionDecisionMethod
 }
 
-export type GetInteractionsResponse = {
-  ok: boolean
-  events?: InteractionEvent[]
-  error?: string
+export type AcceptInteractionResponse = ApiResponse<AcceptInteractionData>
+
+export type GetInteractionsData = {
+  events: InteractionEvent[]
 }
+
+export type GetInteractionsResponse = ApiResponse<GetInteractionsData>

@@ -1,5 +1,6 @@
 import { Actor } from '@cloudflare/actors'
 import type {
+  ApiFailure,
   CreateQrCodeRequest,
   InteractionAttemptRequest,
   InteractionDecisionMethod,
@@ -266,10 +267,18 @@ export class ScanActor extends Actor<Env> {
     `
   }
 
-  async createQrProfile(payload: unknown): Promise<{ ok: boolean; error?: string }> {
+  async createQrProfile(
+    payload: unknown,
+  ): Promise<{ ok: true } | ApiFailure<'invalid_payload'>> {
     const parsed = parseCreatePayload(payload)
     if (!parsed) {
-      return { ok: false, error: 'Invalid QR profile payload' }
+      return {
+        ok: false,
+        error: {
+          code: 'invalid_payload',
+          message: 'Invalid QR profile payload.',
+        },
+      }
     }
 
     const createdAt = new Date().toISOString()
@@ -329,27 +338,38 @@ export class ScanActor extends Actor<Env> {
   }
 
   async attemptInteraction(payload: unknown): Promise<
-    | {
-        ok: false
-        error: string
-      }
+    | ApiFailure<'invalid_payload' | 'not_found'>
     | {
         ok: true
-        accepted: boolean
-        eventId: string
-        reason: string | null
-        distanceMeters: number | null
-        decisionMethod: InteractionDecisionMethod
+        data: {
+          accepted: boolean
+          eventId: string
+          reason: string | null
+          distanceMeters: number | null
+          decisionMethod: InteractionDecisionMethod
+        }
       }
   > {
     const attempt = parseAttemptPayload(payload)
     if (!attempt) {
-      return { ok: false, error: 'Invalid interaction payload' }
+      return {
+        ok: false,
+        error: {
+          code: 'invalid_payload',
+          message: 'Invalid interaction payload.',
+        },
+      }
     }
 
     const profileResponse = await this.getQrProfile()
     if (!profileResponse.profile) {
-      return { ok: false, error: 'QR code not found' }
+      return {
+        ok: false,
+        error: {
+          code: 'not_found',
+          message: 'QR code not found.',
+        },
+      }
     }
 
     const profile = profileResponse.profile
@@ -444,11 +464,13 @@ export class ScanActor extends Actor<Env> {
 
     return {
       ok: true,
-      accepted,
-      eventId,
-      reason,
-      distanceMeters: computedDistance,
-      decisionMethod,
+      data: {
+        accepted,
+        eventId,
+        reason,
+        distanceMeters: computedDistance,
+        decisionMethod,
+      },
     }
   }
 
