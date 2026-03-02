@@ -7,29 +7,38 @@ type QrDetailPageProps = {
 }
 
 export function QrDetailPage({ uuid }: QrDetailPageProps) {
-  const events = useQrStore((state) => state.events)
+  const profile = useQrStore((state) => state.detailProfile)
+  const events = useQrStore((state) => state.detailEvents)
   const status = useQrStore((state) => state.detailStatus)
   const detailLoading = useQrStore((state) => state.detailLoading)
   const streamConnected = useQrStore((state) => state.streamConnected)
-  const loadScans = useQrStore((state) => state.loadScans)
-  const connectStream = useQrStore((state) => state.connectStream)
-  const disconnectStream = useQrStore((state) => state.disconnectStream)
+
+  const loadDetail = useQrStore((state) => state.loadDetail)
+  const refreshDetailEvents = useQrStore((state) => state.refreshDetailEvents)
+  const connectDetailStream = useQrStore((state) => state.connectDetailStream)
+  const disconnectDetailStream = useQrStore((state) => state.disconnectDetailStream)
 
   useEffect(() => {
-    void loadScans(uuid)
-    connectStream(uuid)
+    void loadDetail(uuid)
+    connectDetailStream(uuid)
 
     return () => {
-      disconnectStream()
+      disconnectDetailStream()
     }
-  }, [uuid, connectStream, disconnectStream, loadScans])
+  }, [uuid, loadDetail, connectDetailStream, disconnectDetailStream])
 
   return (
     <section className="card">
       <h2>QR Detail</h2>
       <p>
-        Showing scan history for <code>{uuid}</code>.
+        Showing interaction history for <code>{uuid}</code>.
       </p>
+      {profile ? (
+        <p>
+          Created by <strong>{profile.name}</strong> about{' '}
+          <strong>{profile.topic}</strong>.
+        </p>
+      ) : null}
       <p>{status}</p>
       <p>
         Live updates: {streamConnected ? 'connected' : 'disconnected'}
@@ -42,22 +51,26 @@ export function QrDetailPage({ uuid }: QrDetailPageProps) {
             <thead>
               <tr>
                 <th>Time</th>
-                <th>Colo</th>
-                <th>Location status</th>
-                <th>User location</th>
+                <th>Accepted</th>
+                <th>Method</th>
+                <th>Distance</th>
+                <th>Reason</th>
+                <th>Scanner status</th>
               </tr>
             </thead>
             <tbody>
               {events.map((event) => (
                 <tr key={event.eventId}>
-                  <td>{new Date(event.scannedAt).toLocaleString()}</td>
-                  <td>{event.colo ?? 'n/a'}</td>
-                  <td>{event.locationStatus}</td>
+                  <td>{new Date(event.attemptedAt).toLocaleString()}</td>
+                  <td>{event.accepted ? 'yes' : 'no'}</td>
+                  <td>{event.decisionMethod}</td>
                   <td>
-                    {event.userLocation
-                      ? `${event.userLocation.lat.toFixed(5)}, ${event.userLocation.lng.toFixed(5)} (±${Math.round(event.userLocation.accuracyMeters)}m)`
-                      : 'not provided'}
+                    {event.distanceMeters != null
+                      ? `${Math.round(event.distanceMeters)}m`
+                      : 'n/a'}
                   </td>
+                  <td>{event.reason ?? 'n/a'}</td>
+                  <td>{event.scannerLocationStatus}</td>
                 </tr>
               ))}
             </tbody>
@@ -69,12 +82,12 @@ export function QrDetailPage({ uuid }: QrDetailPageProps) {
         <button
           type="button"
           onClick={() => {
-            void loadScans(uuid)
+            void refreshDetailEvents(uuid)
           }}
         >
           Refresh
         </button>
-        <Link href={`/q/${uuid}`}>Open scan landing page</Link>
+        <Link href={`/q/${uuid}`}>Open scan page</Link>
       </div>
     </section>
   )

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link } from 'wouter'
 import { useQrStore } from '../store/qrStore'
 
@@ -6,20 +7,44 @@ type ScanPageProps = {
 }
 
 export function ScanPage({ uuid }: ScanPageProps) {
+  const profile = useQrStore((state) => state.scanProfile)
   const status = useQrStore((state) => state.scanStatus)
   const busy = useQrStore((state) => state.scanBusy)
-  const completeScan = useQrStore((state) => state.completeScan)
+  const locationRequested = useQrStore((state) => state.scannerLocationRequested)
+
+  const loadScanProfile = useQrStore((state) => state.loadScanProfile)
+  const requestScannerLocation = useQrStore(
+    (state) => state.requestScannerLocation,
+  )
+  const acceptScanInteraction = useQrStore((state) => state.acceptScanInteraction)
+
+  useEffect(() => {
+    void loadScanProfile(uuid)
+  }, [uuid, loadScanProfile])
 
   return (
     <section className="card">
-      <h2>Scan Landing</h2>
+      <h2>Scan QR</h2>
       <p>
-        QR code <code>{uuid}</code> opened successfully.
+        QR code <code>{uuid}</code> opened.
       </p>
-      <p>
-        Tap the button below to share location and save this scan in the Durable
-        Object.
-      </p>
+
+      {profile ? (
+        <>
+          <p>
+            You are about to talk with <strong>{profile.name}</strong>.
+          </p>
+          <p>
+            Topic: <strong>{profile.topic}</strong>
+          </p>
+          <p>
+            Location policy:{' '}
+            {profile.allowColoFallback
+              ? 'GPS preferred, colo fallback allowed'
+              : 'GPS required'}
+          </p>
+        </>
+      ) : null}
 
       <p>{status}</p>
 
@@ -27,13 +52,22 @@ export function ScanPage({ uuid }: ScanPageProps) {
         <button
           type="button"
           onClick={() => {
-            void completeScan(uuid)
+            void requestScannerLocation()
           }}
-          disabled={busy}
+          disabled={busy || !profile}
         >
-          {busy ? 'Working...' : 'Complete scan'}
+          {busy ? 'Working...' : 'Share location'}
         </button>
-        <Link href={`/qr/${uuid}`}>View scans for this QR</Link>
+        <button
+          type="button"
+          onClick={() => {
+            void acceptScanInteraction(uuid)
+          }}
+          disabled={busy || !profile || !locationRequested}
+        >
+          {busy ? 'Working...' : 'Accept interaction'}
+        </button>
+        <Link href={`/qr/${uuid}`}>View interaction history</Link>
       </div>
     </section>
   )

@@ -1,26 +1,20 @@
 import type {
+  AcceptInteractionRequest,
+  AcceptInteractionResponse,
+  CreateQrCodeRequest,
   CreateQrCodeResponse,
-  CreateScanResponse,
-  GetScansResponse,
-  ScanCreateRequest,
+  GetInteractionsResponse,
+  GetQrProfileResponse,
 } from '../types/scan'
 
 async function parseJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T
 }
 
-export async function createQrCode(): Promise<CreateQrCodeResponse> {
+export async function createQrCode(
+  payload: CreateQrCodeRequest,
+): Promise<CreateQrCodeResponse> {
   const response = await fetch('/api/qr-codes', {
-    method: 'POST',
-  })
-
-  return parseJson<CreateQrCodeResponse>(response)
-}
-
-export async function postScan(
-  payload: ScanCreateRequest,
-): Promise<CreateScanResponse> {
-  const response = await fetch('/api/scans', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -28,15 +22,38 @@ export async function postScan(
     body: JSON.stringify(payload),
   })
 
-  return parseJson<CreateScanResponse>(response)
+  return parseJson<CreateQrCodeResponse>(response)
 }
 
-export async function getScans(uuid: string): Promise<GetScansResponse> {
-  const response = await fetch(`/api/scans/${uuid}`)
-  return parseJson<GetScansResponse>(response)
+export async function getQrProfile(uuid: string): Promise<GetQrProfileResponse> {
+  const response = await fetch(`/api/qr-codes/${uuid}`)
+  return parseJson<GetQrProfileResponse>(response)
 }
 
-export function connectScansStream(uuid: string): WebSocket {
+export async function acceptInteraction(
+  payload: AcceptInteractionRequest,
+): Promise<AcceptInteractionResponse> {
+  const response = await fetch('/api/interactions/accept', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  return parseJson<AcceptInteractionResponse>(response)
+}
+
+export async function getInteractions(
+  uuid: string,
+): Promise<GetInteractionsResponse> {
+  const response = await fetch(`/api/interactions/${uuid}`)
+  return parseJson<GetInteractionsResponse>(response)
+}
+
+export function connectInteractionsStream(uuid: string): WebSocket {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  return new WebSocket(`${protocol}://${window.location.host}/api/scans/${uuid}/stream`)
+  return new WebSocket(
+    `${protocol}://${window.location.host}/api/interactions/${uuid}/stream`,
+  )
 }

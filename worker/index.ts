@@ -1,13 +1,51 @@
 import { Hono } from 'hono'
 import { ScanActor } from './actors/ScanActor'
-import { isValidUuid, parseScanCreateRequest } from './lib/validation'
-import type { ScanEvent } from './types'
+import {
+  isValidUuid,
+  parseCreateQrCodeRequest,
+  parseInteractionAttemptRequest,
+} from './lib/validation'
 
 const app = new Hono<{ Bindings: Env }>()
 
-app.post('/api/qr-codes', (c) => {
+const MAX_DISTANCE_METERS = 100
+
+app.post('/api/qr-codes', async (c) => {
+  const payload = await c.req.json().catch(() => null)
+  const parsed = parseCreateQrCodeRequest(payload)
+
+  if (!parsed) {
+    return c.json({ ok: false, error: 'Invalid payload' }, 400)
+  }
+
+  if (parsed.creatorLocationStatus !== 'granted' && !parsed.allowColoFallback) {
+    return c.json(
+      {
+        ok: false,
+        error: 'Creator location is required unless colo fallback is enabled.',
+      },
+      400,
+    )
+  }
+
   const uuid = crypto.randomUUID()
   const baseUrl = new URL(c.req.url).origin
+  const requestWithCf = c.req.raw as Request & { cf?: { colo?: string } }
+  const creatorColo = requestWithCf.cf?.colo ?? null
+
+  const durableObject = c.env.SCAN_ACTOR.getByName(uuid)
+  const createResponse = await durableObject.createQrProfile({
+    uuid,
+    profile: parsed,
+    creatorColo,
+  })
+
+  if (!createResponse.ok) {
+    return c.json(
+      { ok: false, error: createResponse.error ?? 'Failed to create QR code' },
+      500,
+    )
+  }
 
   return c.json({
     ok: true,
@@ -17,44 +55,7 @@ app.post('/api/qr-codes', (c) => {
   })
 })
 
-app.post('/api/scans', async (c) => {
-  const payload = await c.req.json().catch(() => null)
-  const parsed = parseScanCreateRequest(payload)
-
-  if (!parsed) {
-    return c.json({ ok: false, error: 'Invalid payload' }, 400)
-  }
-
-  const requestWithCf = c.req.raw as Request & { cf?: { colo?: string } }
-  const colo = requestWithCf.cf?.colo ?? null
-  const userAgent = c.req.header('user-agent') ?? null
-
-  const event: ScanEvent = {
-    eventId: crypto.randomUUID(),
-    uuid: parsed.uuid,
-    scannedAt: new Date().toISOString(),
-    colo,
-    locationStatus: parsed.locationStatus,
-    userLocation: parsed.userLocation,
-    client: {
-      userAgent,
-    },
-  }
-
-  const durableObject = c.env.SCAN_ACTOR.getByName(parsed.uuid)
-  const response = await durableObject.recordScan(event)
-
-  if (!response.ok || !response.eventId) {
-    return c.json(
-      { ok: false, error: response.error ?? 'Failed to persist scan event' },
-      500,
-    )
-  }
-
-  return c.json({ ok: true, eventId: response.eventId })
-})
-
-app.get('/api/scans/:uuid', async (c) => {
+app.get('/api/qr-codes/:uuid', async (c) => {
   const uuid = c.req.param('uuid')
 
   if (!isValidUuid(uuid)) {
@@ -62,11 +63,63 @@ app.get('/api/scans/:uuid', async (c) => {
   }
 
   const durableObject = c.env.SCAN_ACTOR.getByName(uuid)
-  const response = await durableObject.getScans()
+  const response = await durableObject.getQrProfile()
+
+  if (!response.profile) {
+    return c.json({ ok: false, error: 'QR code not found' }, 404)
+  }
+
+  return c.json({ ok: true, profile: response.profile })
+})
+
+app.post('/api/interactions/accept', async (c) => {
+  const payload = await c.req.json().catch(() => null)
+  const parsed = parseInteractionAttemptRequest(payload)
+
+  if (!parsed) {
+    return c.json({ ok: false, error: 'Invalid payload' }, 400)
+  }
+
+  const requestWithCf = c.req.raw as Request & { cf?: { colo?: string } }
+  const scannerColo = requestWithCf.cf?.colo ?? null
+  const userAgent = c.req.header('user-agent') ?? null
+
+  const durableObject = c.env.SCAN_ACTOR.getByName(parsed.uuid)
+  const response = await durableObject.attemptInteraction({
+    scannerLocation: parsed.scannerLocation,
+    scannerLocationStatus: parsed.scannerLocationStatus,
+    scannerColo,
+    userAgent,
+    maxDistanceMeters: MAX_DISTANCE_METERS,
+  })
+
+  if (!response.ok) {
+    if (response.error === 'QR code not found') {
+      return c.json({ ok: false, error: response.error }, 404)
+    }
+
+    return c.json(
+      { ok: false, error: response.error ?? 'Failed to evaluate interaction' },
+      500,
+    )
+  }
+
   return c.json(response)
 })
 
-app.get('/api/scans/:uuid/stream', async (c) => {
+app.get('/api/interactions/:uuid', async (c) => {
+  const uuid = c.req.param('uuid')
+
+  if (!isValidUuid(uuid)) {
+    return c.json({ ok: false, error: 'Invalid UUID' }, 400)
+  }
+
+  const durableObject = c.env.SCAN_ACTOR.getByName(uuid)
+  const response = await durableObject.getInteractions()
+  return c.json(response)
+})
+
+app.get('/api/interactions/:uuid/stream', async (c) => {
   const uuid = c.req.param('uuid')
 
   if (!isValidUuid(uuid)) {

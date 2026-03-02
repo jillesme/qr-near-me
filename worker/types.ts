@@ -11,19 +11,49 @@ export type UserLocation = {
   accuracyMeters: number
 }
 
-export type ScanCreateRequest = {
-  uuid: string
-  userLocation: UserLocation | null
-  locationStatus: LocationStatus
+export type CreateQrCodeRequest = {
+  name: string
+  topic: string
+  allowColoFallback: boolean
+  creatorLocation: UserLocation | null
+  creatorLocationStatus: LocationStatus
 }
 
-export type ScanEvent = {
+export type QrProfile = {
+  uuid: string
+  name: string
+  topic: string
+  allowColoFallback: boolean
+  creatorLocation: UserLocation | null
+  creatorLocationStatus: LocationStatus
+  creatorColo: string | null
+  createdAt: string
+}
+
+export type InteractionDecisionMethod =
+  | 'gps_distance'
+  | 'colo_fallback'
+  | 'rejected'
+
+export type InteractionAttemptRequest = {
+  scannerLocation: UserLocation | null
+  scannerLocationStatus: LocationStatus
+  scannerColo: string | null
+  userAgent: string | null
+  maxDistanceMeters: number
+}
+
+export type InteractionEvent = {
   eventId: string
   uuid: string
-  scannedAt: string
-  colo: string | null
-  locationStatus: LocationStatus
-  userLocation: UserLocation | null
+  attemptedAt: string
+  scannerLocationStatus: LocationStatus
+  scannerLocation: UserLocation | null
+  scannerColo: string | null
+  accepted: boolean
+  reason: string | null
+  distanceMeters: number | null
+  decisionMethod: InteractionDecisionMethod
   client: {
     userAgent: string | null
   }

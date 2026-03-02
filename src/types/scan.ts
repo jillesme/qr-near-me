@@ -11,19 +11,41 @@ export type UserLocation = {
   accuracyMeters: number
 }
 
-export type ScanCreateRequest = {
-  uuid: string
-  userLocation: UserLocation | null
-  locationStatus: LocationStatus
+export type CreateQrCodeRequest = {
+  name: string
+  topic: string
+  allowColoFallback: boolean
+  creatorLocation: UserLocation | null
+  creatorLocationStatus: LocationStatus
 }
 
-export type ScanEvent = {
+export type QrProfile = {
+  uuid: string
+  name: string
+  topic: string
+  allowColoFallback: boolean
+  creatorLocation: UserLocation | null
+  creatorLocationStatus: LocationStatus
+  creatorColo: string | null
+  createdAt: string
+}
+
+export type InteractionDecisionMethod =
+  | 'gps_distance'
+  | 'colo_fallback'
+  | 'rejected'
+
+export type InteractionEvent = {
   eventId: string
   uuid: string
-  scannedAt: string
-  colo: string | null
-  locationStatus: LocationStatus
-  userLocation: UserLocation | null
+  attemptedAt: string
+  scannerLocationStatus: LocationStatus
+  scannerLocation: UserLocation | null
+  scannerColo: string | null
+  accepted: boolean
+  reason: string | null
+  distanceMeters: number | null
+  decisionMethod: InteractionDecisionMethod
   client: {
     userAgent: string | null
   }
@@ -31,19 +53,36 @@ export type ScanEvent = {
 
 export type CreateQrCodeResponse = {
   ok: boolean
-  uuid: string
-  scanUrl: string
-  detailUrl: string
-}
-
-export type CreateScanResponse = {
-  ok: boolean
-  eventId?: string
+  uuid?: string
+  scanUrl?: string
+  detailUrl?: string
   error?: string
 }
 
-export type GetScansResponse = {
+export type GetQrProfileResponse = {
   ok: boolean
-  events?: ScanEvent[]
+  profile?: QrProfile
+  error?: string
+}
+
+export type AcceptInteractionRequest = {
+  uuid: string
+  scannerLocation: UserLocation | null
+  scannerLocationStatus: LocationStatus
+}
+
+export type AcceptInteractionResponse = {
+  ok: boolean
+  accepted?: boolean
+  eventId?: string
+  reason?: string | null
+  distanceMeters?: number | null
+  decisionMethod?: InteractionDecisionMethod
+  error?: string
+}
+
+export type GetInteractionsResponse = {
+  ok: boolean
+  events?: InteractionEvent[]
   error?: string
 }

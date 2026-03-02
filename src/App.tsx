@@ -8,8 +8,8 @@ function App() {
   return (
     <main className="app-shell">
       <header className="app-header">
-        <h1>QR Scan Location PoC</h1>
-        <p>Phase 1: route skeleton and flow preview.</p>
+        <h1>Nearby QR Conversations</h1>
+        <p>Create a QR with metadata and allow only nearby interactions.</p>
         <nav>
           <Link href="/">Create QR</Link>
         </nav>
@@ -26,7 +26,7 @@ function App() {
         <Route>
           <section className="card">
             <h2>Page not found</h2>
-            <p>The route does not exist yet.</p>
+            <p>The route does not exist.</p>
             <Link href="/">Go back</Link>
           </section>
         </Route>
