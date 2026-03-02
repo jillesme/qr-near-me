@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Link } from 'wouter'
-
-function newUuid() {
-  return crypto.randomUUID()
-}
+import { useQrStore } from '../store/qrStore'
 
 export function CreateQrPage() {
-  const [uuid, setUuid] = useState(() => newUuid())
+  const uuid = useQrStore((state) => state.uuid)
+  const regenerateUuid = useQrStore((state) => state.regenerateUuid)
   const [copyStatus, setCopyStatus] = useState<string | null>(null)
 
   const origin = typeof window === 'undefined' ? '' : window.location.origin
@@ -45,7 +43,7 @@ export function CreateQrPage() {
       </p>
 
       <div className="actions">
-        <button type="button" onClick={() => setUuid(newUuid())}>
+        <button type="button" onClick={regenerateUuid}>
           Generate new UUID
         </button>
         <button type="button" onClick={() => copyText(scanUrl)}>
