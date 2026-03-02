@@ -125,9 +125,10 @@ Additional endpoint for QR management:
 - Handle denied/error states
 - Post payload to Worker endpoint
 
-### Phase 3: Worker enrichment + persistence
+### Phase 3: Worker API with Hono + persistence
 - Parse Cloudflare colo from request
 - Validate UUID and payload
+- Implement API routes with `hono`
 - Write event through Actor and return ack
 
 ### Phase 4: Verify end-to-end on device
@@ -167,6 +168,7 @@ Additional endpoint for QR management:
 - QR generation: use a maintained package such as `qrcode`.
 - Geolocation: browser Web Geolocation API (built-in).
 - Routing: `wouter`.
+- Worker API framework (Phase 3): `hono`.
 
 ## Concrete Implementation Checklist (file-by-file)
 
@@ -233,6 +235,7 @@ Additional endpoint for QR management:
 ## 6) Worker API and Actor wiring
 
 - [ ] `worker/index.ts` (new)
+  - Build API routes using `hono` and mount under `/api/*`.
   - Implement `POST /api/qr-codes` for UUID creation and canonical URLs.
   - Implement `POST /api/scans`:
     - validate UUID and payload
